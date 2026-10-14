@@ -87,19 +87,25 @@ jobs:
           pattern: core-*
           path: built
           merge-multiple: true
+      # Named for the commit (its time, UTC, and hash), so a rerun of the
+      # same commit publishes into the same release rather than a new one.
       - name: Name the release
         id: tag
-        run: echo "tag=cores-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        run: echo "tag=cores-$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Assemble the site
         run: python3 tools/site.py built site "${{ steps.tag.outputs.tag }}"
       - name: Release the sources
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          gh release create "${{ steps.tag.outputs.tag }}" built/sources/*.tar.gz \
-            --target "$GITHUB_SHA" \
-            --title "${{ steps.tag.outputs.tag }}" \
-            --notes-file RELEASE.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" built/sources/*.tar.gz --clobber
+            gh release edit "$TAG" --notes-file RELEASE.md
+          else
+            gh release create "$TAG" built/sources/*.tar.gz \
+              --target "$GITHUB_SHA" --title "$TAG" --notes-file RELEASE.md
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
