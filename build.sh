@@ -111,6 +111,13 @@ for recipe in "${recipes[@]}"; do
       echo "$core: build failed (log: $dir/pc-web-build.log)" >&2
       exit 1
     }
+    # A makefile whose object list lives in a file it includes leaves the
+    # wrapper with nothing to archive: make succeeds and the link fails later
+    # on every missing retro_* symbol. Stop here instead, naming the cause.
+    if [[ -z "$(emar t "$archive" 2>/dev/null)" ]]; then
+      echo "$core: $archive is empty - \$($objects) named no objects; point makefile in cores.json at the one that defines them" >&2
+      exit 1
+    fi
   fi
 
   # Link the core alone into a module a page instantiates on demand. No

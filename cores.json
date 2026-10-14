@@ -442,5 +442,17 @@
     "commit": "96f89550a3518dffe2e7561c971119a39d90de97",
     "makefile": "Makefile",
     "link_flags": ""
+  },
+  {
+    "core": "vecx",
+    "name": "vecx",
+    "systems": "GCE Vectrex",
+    "license": "GPL-3.0",
+    "license_file": "LICENSE.md",
+    "note": "",
+    "source": "https://github.com/libretro/libretro-vecx",
+    "commit": "8f671cc9d737f2890c3ce19e177e2984dcae121f",
+    "makefile": "Makefile.libretro",
+    "link_flags": ""
   }
 ]
