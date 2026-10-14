@@ -1,0 +1,32 @@
+MAME 2003-Plus declares start_system18_vdp as void in system16.h and
+system16_vidhrdw.c, but segac2_vidhrdw.c defines it returning int. Native
+linkers let it pass; wasm-ld turns the void call sites into a mismatch stub
+that traps, and in some link orders writes code wasm-opt rejects. Declare it
+int everywhere; the callers ignore the result.
+
+diff --git a/src/includes/system16.h b/src/includes/system16.h
+index db47c65..883a5d5 100644
+--- a/src/includes/system16.h
++++ b/src/includes/system16.h
+@@ -272,7 +272,7 @@ void system18_set_vdp_mixing(int mixing);
+ 
+ /* vidhrdw/segac2.c */
+ void update_system18_vdp( struct mame_bitmap *bitmap, const struct rectangle *cliprect );
+-void start_system18_vdp(void);
++int start_system18_vdp(void);
+ READ16_HANDLER( segac2_vdp_r );
+ WRITE16_HANDLER( segac2_vdp_w );
+ 
+diff --git a/src/vidhrdw/system16_vidhrdw.c b/src/vidhrdw/system16_vidhrdw.c
+index 294338f..678ab08 100644
+--- a/src/vidhrdw/system16_vidhrdw.c
++++ b/src/vidhrdw/system16_vidhrdw.c
+@@ -95,7 +95,7 @@ type1		type0			function
+ 
+ /* vidhrdw/segac2.c */
+ extern void update_system18_vdp( struct mame_bitmap *bitmap, const struct rectangle *cliprect );
+-extern void start_system18_vdp(void);
++extern int start_system18_vdp(void);
+ extern READ16_HANDLER( segac2_vdp_r );
+ extern WRITE16_HANDLER( segac2_vdp_w );
+ data16_t sys18_ddcrew_bankregs[0x20];

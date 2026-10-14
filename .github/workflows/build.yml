@@ -1,0 +1,108 @@
+# Builds every core in cores.json for the browser, one job per core, then
+# publishes them together: a release with each core's source archive
+# attached, and the modules on GitHub Pages (cores.poly-console.com).
+# Nothing is published unless every core built.
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - cores.json
+      - build.sh
+      - patches/**
+      - tools/**
+      - .github/workflows/build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+env:
+  EMSDK_VERSION: 4.0.10
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      cores: ${{ steps.list.outputs.cores }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          echo "cores=$(python3 -c 'import json; print(json.dumps([c["core"] for c in json.load(open("cores.json"))]))')" >> "$GITHUB_OUTPUT"
+
+  core:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        core: ${{ fromJSON(needs.plan.outputs.cores) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Emscripten
+        uses: actions/cache@v4
+        with:
+          path: emsdk
+          key: emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}
+      - name: Install Emscripten ${{ env.EMSDK_VERSION }}
+        run: |
+          [ -d emsdk/.git ] || git clone --depth 1 https://github.com/emscripten-core/emsdk.git emsdk
+          ./emsdk/emsdk install "$EMSDK_VERSION"
+          ./emsdk/emsdk activate "$EMSDK_VERSION"
+      - name: Build ${{ matrix.core }}
+        run: |
+          source emsdk/emsdk_env.sh
+          SOURCES=1 ./build.sh out "${{ matrix.core }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-${{ matrix.core }}
+          path: |
+            out/*_libretro.js
+            out/*_libretro.wasm
+            out/sources/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: core
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: core-*
+          path: built
+          merge-multiple: true
+      - name: Name the release
+        id: tag
+        run: echo "tag=cores-$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - name: Assemble the site
+        run: python3 tools/site.py built site "${{ steps.tag.outputs.tag }}"
+      - name: Release the sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" built/sources/*.tar.gz \
+            --target "$GITHUB_SHA" \
+            --title "${{ steps.tag.outputs.tag }}" \
+            --notes-file RELEASE.md
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
