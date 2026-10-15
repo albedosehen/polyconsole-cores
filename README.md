@@ -37,6 +37,15 @@ serves them with `Access-Control-Allow-Origin: *`, so a page on another origin
 can import a core, as long as its Content-Security-Policy allows this origin in
 `script-src` and `connect-src`.
 
+A core that draws with OpenGL ES (ParaLLEl N64, Flycast) is built with WebGL 2
+and renders through `RETRO_ENVIRONMENT_SET_HW_RENDER`, as on a phone. `build.sh`
+sees it in the core's code (it calls `gl*` functions), and its module also
+exports what the page needs to give it a context: `GL` (Emscripten's, to create
+a WebGL 2 context and make it current), `emscripten_webgl_get_proc_address`
+(to answer the core's `get_proc_address`) and `wasmTable` (to call the
+`context_reset` and `context_destroy` the core hands over). The page reads each
+frame back from that context.
+
 ## Building locally
 
 On Linux (WSL works) with git, make, python3 and Emscripten 4.0.10:

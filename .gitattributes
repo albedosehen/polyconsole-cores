@@ -1,2 +1,4 @@
 * text=auto eol=lf
-*.patch -text
+# A patch's context lines start with a space, so its blank and tab-indented
+# lines read as whitespace errors to `git diff --check`; they are not.
+*.patch -text -whitespace

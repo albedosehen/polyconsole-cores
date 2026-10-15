@@ -1,0 +1,20 @@
+rglGetString in libretro-common's GL state manager calls glGetString and
+drops the result, falling off the end of a function that returns a pointer.
+Native ABIs happen to leave the string in the return register; WebAssembly
+does not, and Flycast reads garbage for the GL version. Return it.
+
+diff --git a/core/libretro-common/glsm/glsm.c b/core/libretro-common/glsm/glsm.c
+index d9d0dfa..db1ed0b 100644
+--- a/core/libretro-common/glsm/glsm.c
++++ b/core/libretro-common/glsm/glsm.c
+@@ -271,7 +271,9 @@ const GLubyte* rglGetString(GLenum name)
+    log_cb(RETRO_LOG_INFO, "glGetString.\n");
+ #endif
+ #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
+-   glGetString(name);
++   return glGetString(name);
++#else
++   return NULL;
+ #endif
+ }
+ 

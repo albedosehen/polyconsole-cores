@@ -72,6 +72,18 @@
     "link_flags": ""
   },
   {
+    "core": "parallel_n64",
+    "name": "ParaLLEl N64",
+    "systems": "Nintendo 64",
+    "license": "GPL-2.0",
+    "license_file": "mupen64plus-core/LICENSES",
+    "note": "Draws with WebGL 2 (the Glide64 renderer). Its parts keep their own licenses, listed in mupen64plus-core/LICENSES and beside each.",
+    "source": "https://github.com/libretro/parallel-n64",
+    "commit": "a8280501a71c1bcd4c85c5b8bfe75cfa62cd6127",
+    "makefile": "Makefile",
+    "link_flags": "-sINITIAL_MEMORY=402653184 -sFULL_ES3=1"
+  },
+  {
     "core": "pcsx_rearmed",
     "name": "PCSX ReARMed",
     "systems": "Sony PlayStation",
@@ -82,6 +94,18 @@
     "commit": "c8816799b50388e61cfe237fe2cdbb7d8175f20a",
     "makefile": "Makefile.libretro",
     "link_flags": "-sUSE_ZLIB=1"
+  },
+  {
+    "core": "flycast",
+    "name": "Flycast",
+    "systems": "Sega Dreamcast",
+    "license": "GPL-2.0",
+    "license_file": "LICENSE",
+    "note": "Draws with WebGL 2. Runs the Dreamcast's CPU on its interpreter: WebAssembly has no recompiler.",
+    "source": "https://github.com/libretro/flycast",
+    "commit": "9b2c7d90f6f8856d99bdf4ee6d350b1b81fe6374",
+    "makefile": "Makefile",
+    "link_flags": ""
   },
   {
     "core": "mednafen_pce_fast",
