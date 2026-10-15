@@ -1,0 +1,32 @@
+Threaded rendering is on by default: retro_run starts an emulation thread
+and waits for it to make the frame. A WebAssembly build without pthreads
+cannot start one (pthread_create fails), so retro_run waits forever and
+takes the page's thread with it. Keep it off there, whatever the option says;
+one thread runs the machine and draws, as with the option off.
+
+diff --git a/core/libretro/libretro.cpp b/core/libretro/libretro.cpp
+index 37e7b1f..95e7a75 100644
+--- a/core/libretro/libretro.cpp
++++ b/core/libretro/libretro.cpp
+@@ -1144,6 +1144,11 @@ static void update_variables(bool first_startup)
+ 
+       if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+          threaded = !strcmp("enabled", var.value);
++#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
++      /* WebAssembly without threads: no emulation thread can start, and
++       * retro_run would wait for one forever */
++      threaded = false;
++#endif
+       /* Changed while the game runs: the emulation thread is started or
+        * stopped between two frames, from retro_run() (apply_threading()) -
+        * this is also called from where it cannot be. */
+@@ -1163,6 +1168,9 @@ static void update_variables(bool first_startup)
+ 	   }
+ 	   else
+ 		   settings.rend.ThreadedRendering = false;
++#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
++	   settings.rend.ThreadedRendering = false;
++#endif
+ 
+ 	   if ( settings.rend.ThreadedRendering  )
+       {

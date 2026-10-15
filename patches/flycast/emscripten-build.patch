@@ -1,0 +1,49 @@
+Flycast's emscripten settings make CPUFLAGS and PLATCFLAGS but never hand
+them to the compiler, and ask for the recompiler (NO_REC=0), which needs code
+made at run time: WebAssembly cannot run that. Build the SH4 interpreter for a
+generic host CPU, without OpenMP (Emscripten has none) or exceptions. Its
+dynarec checks also take an empty WITH_DYNAREC for x86-64 (`ifeq` of two empty
+strings holds), which would build for an x64 host; test for a match instead.
+
+diff --git a/Makefile b/Makefile
+index 2f0f65c..5b0ab67 100644
+--- a/Makefile
++++ b/Makefile
+@@ -873,8 +873,17 @@ else ifeq ($(platform), emscripten)
+ 	SINGLE_THREAD := 1
+ 	PLATCFLAGS += -Drglgen_resolve_symbols_custom=reicast_rglgen_resolve_symbols_custom \
+ 					  -Drglgen_resolve_symbols=reicast_rglgen_resolve_symbols
+-
+-	NO_REC=0
++	# Handed to the compiler, as every other platform does with its own
++	CFLAGS += $(CPUFLAGS) $(PLATCFLAGS)
++	CXXFLAGS += $(CPUFLAGS) $(PLATCFLAGS)
++	# No recompiler: WebAssembly cannot run code made at run time, and the
++	# generic C++ one is slower than the interpreter here
++	NO_REC=1
++	HAVE_GENERIC_JIT = 0
++	HOST_CPU_FLAGS = -DHOST_CPU=0x20000005
++	# No OpenMP in Emscripten, and no fault handler to make fast memory with
++	HAVE_OPENMP = 0
++	NO_EXCEPTIONS = 1
+ 	PLATFORM_EXT := unix
+ 	#HAVE_SHARED_CONTEXT := 1
+ 
+@@ -926,7 +935,7 @@ ifeq ($(ARM_FLOAT_ABI_HARD),1)
+ 	CFLAGS += -DARM_HARDFP
+ endif
+ 
+-ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), x86_64 x64))
++ifneq (,$(filter $(WITH_DYNAREC), x86_64 x64))
+ 	HOST_CPU_FLAGS = -DHOST_CPU=$(HOST_CPU_X64)
+ 	HAVE_LTCG = 0
+ endif
+@@ -939,7 +948,7 @@ ifeq ($(WITH_DYNAREC), arm)
+ 	HOST_CPU_FLAGS = -DHOST_CPU=$(HOST_CPU_ARM)
+ endif
+ 
+-ifeq ($(WITH_DYNAREC), $(filter $(WITH_DYNAREC), arm64 aarch64))
++ifneq (,$(filter $(WITH_DYNAREC), arm64 aarch64))
+ 	HOST_CPU_FLAGS = -DHOST_CPU=$(HOST_CPU_ARM64)
+ endif
+ 

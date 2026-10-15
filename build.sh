@@ -135,6 +135,19 @@ for recipe in "${recipes[@]}"; do
       exports+=",_$fn"
     fi
   done
+  # A core that draws with OpenGL ES (it calls gl* functions) renders through
+  # RETRO_ENVIRONMENT_SET_HW_RENDER. It gets WebGL 2, and the module exports
+  # what the page needs to give it a context: GL to create one and make it
+  # current, emscripten_webgl_get_proc_address to answer the core's
+  # get_proc_address with, and wasmTable to call the context_reset and
+  # context_destroy the core hands over.
+  runtime=FS,HEAPU8,HEAP16,UTF8ToString,stringToNewUTF8,addFunction
+  gl=()
+  if grep -qE " U gl[A-Z]" <<<"$symbols"; then
+    exports+=",_emscripten_webgl_get_proc_address"
+    runtime+=",GL,wasmTable"
+    gl=(-sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sGL_ENABLE_GET_PROC_ADDRESS=1)
+  fi
   keep=()
   IFS=',' read -ra wanted_exports <<<"$exports"
   for sym in "${wanted_exports[@]}"; do
@@ -147,7 +160,7 @@ for recipe in "${recipes[@]}"; do
     -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=33554432 -sSTACK_SIZE=2097152 \
     -sFORCE_FILESYSTEM=1 -sALLOW_TABLE_GROWTH=1 -sWASM_BIGINT=1 \
     -sEXPORTED_FUNCTIONS="$exports" \
-    -sEXPORTED_RUNTIME_METHODS=FS,HEAPU8,HEAP16,UTF8ToString,stringToNewUTF8,addFunction \
+    -sEXPORTED_RUNTIME_METHODS="$runtime" "${gl[@]}" \
     -lm $extra
 
   built+=("$core")

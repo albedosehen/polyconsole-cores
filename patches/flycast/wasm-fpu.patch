@@ -1,0 +1,19 @@
+setHostRoundingMode stops the build with #error on a host CPU it has no case
+for. WebAssembly's floating point always rounds to nearest and keeps
+denormals, with no control register to set, so a generic host does nothing
+there.
+
+diff --git a/core/hw/sh4/sh4_core_regs.cpp b/core/hw/sh4/sh4_core_regs.cpp
+index ae33b89..3bb5b11 100644
+--- a/core/hw/sh4/sh4_core_regs.cpp
++++ b/core/hw/sh4/sh4_core_regs.cpp
+@@ -148,6 +148,9 @@ static void setHostRoundingMode()
+                 : "r"(off_mask), "r"(on_mask)
+                 : "x10"
+             );
++#elif HOST_CPU == CPU_GENERIC
++		/* WebAssembly: round-to-nearest and denormals are fixed; there is no
++		 * host floating-point control register to set. */
+ #else
+ 	#error "SetFloatStatusReg: Unsupported platform"
+ #endif

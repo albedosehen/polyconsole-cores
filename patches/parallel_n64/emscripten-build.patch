@@ -1,0 +1,29 @@
+ParaLLEl N64's emscripten settings add src/device/r4300/empty_dynarec.c, a
+file the tree no longer has, and every platform compiles its C with -fcommon,
+which WebAssembly objects cannot carry (wasm-ld has no common symbols). Drop
+the stale source, and leave -fcommon off for emscripten.
+
+diff --git a/Makefile b/Makefile
+index 82acd85..04aab9b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -523,7 +523,6 @@ else ifeq ($(platform), emscripten)
+    HAVE_NEON = 0
+    PLATFORM_EXT := unix
+    STATIC_LINKING = 1
+-   SOURCES_C += $(CORE_DIR)/src/device/r4300/empty_dynarec.c
+ 
+ # PlayStation Vita
+ else ifneq (,$(findstring vita,$(platform)))
+@@ -1102,7 +1101,10 @@ ASFLAGS     := $(ASFLAGS) $(CFLAGS) $(CPUFLAGS)
+ OBJECTS     += $(SOURCES_CXX:.cpp=.o) $(SOURCES_C:.c=.o) $(SOURCES_ASM:.S=.o)
+ OBJECTS     += $(SOURCES_NASM:.asm=.o)
+ CXXFLAGS    += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(INCFLAGS_PLATFORM) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
+-CFLAGS      += -fcommon $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(INCFLAGS_PLATFORM) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
++ifneq ($(platform), emscripten)
++CFLAGS      += -fcommon
++endif
++CFLAGS      += $(CPUOPTS) $(COREFLAGS) $(INCFLAGS) $(INCFLAGS_PLATFORM) $(fpic) $(PLATCFLAGS) $(CPUFLAGS) $(GLFLAGS) $(DYNAFLAGS)
+ 
+ ifeq ($(findstring Haiku,$(UNAME)),)
+ ifeq (,$(findstring msvc,$(platform)))
